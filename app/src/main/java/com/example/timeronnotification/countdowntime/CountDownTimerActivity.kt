@@ -3,19 +3,21 @@ package com.example.timeronnotification.countdowntime
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.os.Build
 import android.os.Bundle
 import android.os.CountDownTimer
 import android.widget.ProgressBar
 import android.widget.TextView
-import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
-import com.example.timeronnotification.Constants
+import com.example.timeronnotification.countdowntime.CountdownService.Companion.isRunning
+import com.example.timeronnotification.countdowntime.CountdownService.Companion.latestProgress
+import com.example.timeronnotification.countdowntime.CountdownService.Companion.latestSecondsLeft
 import com.example.timeronnotification.databinding.ActivityCountDownTimerBinding
 
 class CountDownTimerActivity : AppCompatActivity() {
-    lateinit var _binding : ActivityCountDownTimerBinding
-    private val binding get() = _binding
+
+    private lateinit var binding: ActivityCountDownTimerBinding
     private lateinit var progressBar: ProgressBar
     private lateinit var tvTimer: TextView
     private lateinit var startBtn: TextView
@@ -28,55 +30,30 @@ class CountDownTimerActivity : AppCompatActivity() {
             val progress = intent?.getIntExtra("progress", 100) ?: 100
             val secondsLeft = intent?.getIntExtra("secondsLeft", 0) ?: 0
             updateUI(progress, secondsLeft)
-
-        }
-
-        private fun updateUI(progress: Int, secondsLeft: Int) {
-            progressBar.progress = progress
-            tvTimer.text = "${secondsLeft}s"
         }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
-        _binding = ActivityCountDownTimerBinding.inflate(layoutInflater)
+        binding = ActivityCountDownTimerBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
         initViews()
 
         startBtn.setOnClickListener {
-//            startCountdown()
-
-            val intent = Intent(this, CountdownService::class.java)
+            val intent = Intent(this, CountdownService::class.java).apply {
+                action = CountdownService.ACTION_START
+            }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                //startForegroundService(intent)
-                intent.action = Constants.ACTION.STARTFOREGROUND_ACTION
+                startForegroundService(intent)
+            } else {
                 startService(intent)
             }
         }
 
-//        // Register broadcast receiver
-//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-//            registerReceiver(
-//                receiver,
-//                IntentFilter("COUNTDOWN_UPDATE"),
-//                Context.RECEIVER_NOT_EXPORTED
-//            )
-//        }
-
-        // Immediately show latest progress if service was already running
+        registerCountdownReceiver()
         updateUI(CountdownService.latestProgress, CountdownService.latestSecondsLeft)
 
-
-        // ✅ Add the flag here
-//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-//            registerReceiver(
-//                receiver,
-//                IntentFilter("COUNTDOWN_UPDATE"),
-//                Context.RECEIVER_NOT_EXPORTED
-//            )
-//        }
     }
 
     private fun initViews() {
@@ -85,9 +62,21 @@ class CountDownTimerActivity : AppCompatActivity() {
         startBtn = binding.startBtn
     }
 
+    private fun registerCountdownReceiver() {
+        val filter = IntentFilter("COUNTDOWN_UPDATE")
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                registerReceiver(receiver, filter, Context.RECEIVER_NOT_EXPORTED)
+            } else {
+                //registerReceiver(receiver, filter)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
     override fun onResume() {
         super.onResume()
-        // Re-sync in case app reopened from notification
         updateUI(CountdownService.latestProgress, CountdownService.latestSecondsLeft)
     }
 
@@ -96,25 +85,11 @@ class CountDownTimerActivity : AppCompatActivity() {
         tvTimer.text = if (secondsLeft > 0) "${secondsLeft}s" else "Done!"
     }
 
-    private fun startCountdown() {
-        progressBar.progress = 100
-
-        object : CountDownTimer(totalTime, interval) {
-            override fun onTick(millisUntilFinished: Long) {
-                val progress = (millisUntilFinished * 100 / totalTime).toInt()
-                progressBar.progress = progress
-                tvTimer.text = "${millisUntilFinished / 1000}s"
-            }
-
-            override fun onFinish() {
-                progressBar.progress = 0
-                tvTimer.text = "Done!"
-            }
-        }.start()
-    }
-
     override fun onDestroy() {
-        unregisterReceiver(receiver)
+        try {
+            unregisterReceiver(receiver)
+        } catch (_: Exception) {
+        }
         super.onDestroy()
     }
 }

@@ -23,16 +23,17 @@
         android:layout_marginTop="24dp"
         android:textSize="24sp"
         android:textColor="@android:color/black"
-        android:text="10s" />
+        android:text="30s" />
 
     <TextView
         android:id="@+id/startBtn"
-        android:layout_width="wrap_content"
+        android:layout_width="100dp"
         android:layout_height="wrap_content"
         android:text="Start"
+        android:gravity="center"
         android:textColor="@color/white"
         android:padding="12dp"
         android:layout_margin="8dp"
         android:textSize="20sp"
-        android:background="#14E61C"/>
+        android:background="#2196F3"/>
 </LinearLayout>

@@ -1,13 +1,17 @@
 package com.example.timeronnotification.countdowntime
 
-import android.app.*
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
+import android.app.Service
+import android.content.Context
 import android.content.Intent
 import android.graphics.Color
 import android.os.Build
 import android.os.CountDownTimer
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
-import com.example.timeronnotification.Constants
 import com.example.timeronnotification.R
 
 class CountdownService : Service() {
@@ -16,12 +20,15 @@ class CountdownService : Service() {
     private val notificationId = 1
     private var countDownTimer: CountDownTimer? = null
 
-    private val totalTime = 10_000L // 10 seconds
-    private val interval = 1000L // update every 1s
+    private val totalTime = 30_000L // 10 seconds
+    private val interval = 1000L // 1s
 
     companion object {
         var latestProgress = 100
         var latestSecondsLeft = 10
+        var isRunning = false
+        const val ACTION_START = "ACTION_START_TIMER"
+        const val ACTION_STOP = "ACTION_STOP_TIMER"
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -29,19 +36,22 @@ class CountdownService : Service() {
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
-
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (intent?.action == Constants.ACTION.STARTFOREGROUND_ACTION) {
-            startForeground(notificationId, buildNotification("Timer started"))
-            startCountdown()
-            //isPlaying = true
-        } else if (intent?.action == Constants.ACTION.STOPFOREGROUND_ACTION) {
-            stopForeground(true)
-//            stopMusic()
-//            isPlaying = false
-            stopSelf()
+        when (intent?.action) {
+            ACTION_START -> {
+                if (!isRunning) {
+                    startForeground(notificationId, buildNotification("Starting timer..."))
+                    startCountdown()
+                    isRunning = true
+                }
+            }
+            ACTION_STOP -> {
+                stopCountdown()
+                stopForeground(STOP_FOREGROUND_REMOVE)
+                stopSelf()
+            }
         }
         return START_NOT_STICKY
     }
@@ -53,71 +63,94 @@ class CountdownService : Service() {
                 latestSecondsLeft = (millisUntilFinished / 1000).toInt()
 
                 sendProgressToActivity()
-                updateNotification("Time left: ${latestSecondsLeft}s")
+                updateNotification("Time left: ${latestSecondsLeft}s", latestProgress)
             }
 
             override fun onFinish() {
                 latestProgress = 0
                 latestSecondsLeft = 0
                 sendProgressToActivity()
-                updateNotification("Timer finished!")
+                updateNotification("Timer finished!", 0)
+                isRunning = false
                 stopSelf()
             }
         }.start()
     }
 
+    private fun stopCountdown() {
+        countDownTimer?.cancel()
+        countDownTimer = null
+        isRunning = false
+    }
+
     private fun sendProgressToActivity() {
-        val intent = Intent("COUNTDOWN_UPDATE")
-        intent.putExtra("progress", latestProgress)
-        intent.putExtra("secondsLeft", latestSecondsLeft)
-        sendBroadcast(intent)
+        val updateIntent = Intent("COUNTDOWN_UPDATE").apply {
+            putExtra("progress", latestProgress)
+            putExtra("secondsLeft", latestSecondsLeft)
+        }
+        sendBroadcast(updateIntent)
     }
 
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 channelId,
-                "Countdown Timer Channel",
-                NotificationManager.IMPORTANCE_HIGH
+                "Countdown Timer",
+                NotificationManager.IMPORTANCE_LOW
             ).apply {
-                enableLights(true) // Turn on notification light
+                enableLights(false)
+                enableVibration(false)
                 lightColor = Color.GREEN
-                enableVibration(true) // Allow vibration for notifications
             }
-
-            val manager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+            val manager = getSystemService(NotificationManager::class.java)
             manager.createNotificationChannel(channel)
         }
     }
 
     private fun buildNotification(content: String): Notification {
-        val intent = Intent(this, CountDownTimerActivity::class.java).apply {
+        val openActivityIntent = Intent(this, CountDownTimerActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
-
         val pendingIntent = PendingIntent.getActivity(
-            this, 0, intent,
+            this, 0, openActivityIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        val stopIntent = Intent(this, CountdownService::class.java).apply {
+            action = ACTION_STOP
+        }
+        val stopPending = PendingIntent.getService(
+            this, 0, stopIntent, PendingIntent.FLAG_IMMUTABLE
+        )
+
         return NotificationCompat.Builder(this, channelId)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentTitle("Countdown Timer")
             .setContentText(content)
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
-            .setOngoing(true)
-            .setOnlyAlertOnce(true)
             .setProgress(100, latestProgress, false)
             .setContentIntent(pendingIntent)
+            .setOngoing(true)
+            .addAction(R.drawable.ic_launcher_foreground, "Stop", stopPending)
+            .setOnlyAlertOnce(true)
             .build()
     }
 
-    private fun updateNotification(content: String) {
-        val manager = getSystemService(NotificationManager::class.java)
-        manager.notify(notificationId, buildNotification(content))
+    private fun updateNotification(content: String, progress: Int) {
+        val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val updated = NotificationCompat.Builder(this, channelId)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setContentTitle("Countdown Timer")
+            .setContentText(content)
+            .setProgress(100, progress, false)
+            .setOngoing(true)
+            .setOnlyAlertOnce(true)
+            .build()
+        manager.notify(notificationId, updated)
     }
 
     override fun onDestroy() {
-        countDownTimer?.cancel()
+        stopCountdown()
         super.onDestroy()
     }
+
 }
