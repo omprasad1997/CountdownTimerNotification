@@ -16,17 +16,8 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.TimerOnNotification">
-        <service
-            android:name=".practice.MusicPlayerService"
-            android:exported="true"
-            android:foregroundServiceType="mediaPlayback" />
-        <service
-            android:name=".countdowntime.CountdownService"
-            android:exported="false"
-            android:foregroundServiceType="dataSync" />
-
         <activity
-            android:name=".countdowntime.CountDownTimerActivity"
+            android:name=".workmanager.MainWorkManagerActivity"
             android:exported="true">
 
             <intent-filter>
@@ -35,15 +26,34 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-
         <activity
-            android:name=".practice.MusicPlayerActivity"
+            android:name=".assignment.TimerNotificationActivity"
             android:exported="true">
 
         </activity>
+
+        <service
+            android:name=".practice.MusicPlayerService"
+            android:exported="true"
+            android:foregroundServiceType="mediaPlayback" />
+        <service
+            android:name=".countdowntime.CountdownService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+        <service
+            android:name=".assignment.TimerService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+
+        <activity
+            android:name=".countdowntime.CountDownTimerActivity"
+            android:exported="true" />
+        <activity
+            android:name=".practice.MusicPlayerActivity"
+            android:exported="true" />
         <activity
             android:name=".practice.MainActivity"
-            android:exported="true"/>
+            android:exported="true" />
     </application>
 
 </manifest>
