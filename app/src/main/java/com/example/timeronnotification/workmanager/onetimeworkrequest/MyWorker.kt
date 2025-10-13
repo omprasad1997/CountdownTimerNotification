@@ -1,4 +1,4 @@
-package com.example.timeronnotification.workmanager.onetimerequest
+package com.example.timeronnotification.workmanager.onetimeworkrequest
 
 import android.app.NotificationChannel
 import android.app.NotificationManager

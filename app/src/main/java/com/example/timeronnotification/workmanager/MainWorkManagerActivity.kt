@@ -3,21 +3,21 @@ package com.example.timeronnotification.workmanager
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
 import androidx.work.Data
 import androidx.work.OneTimeWorkRequestBuilder
-import androidx.work.WorkInfo
+import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import com.example.timeronnotification.R
-import com.example.timeronnotification.workmanager.onetimerequest.MyWorker
+import com.example.timeronnotification.workmanager.onetimeworkrequest.MyWorker
+import com.example.timeronnotification.workmanager.periodicworkrequest.PeriodicWorker
+import java.util.concurrent.TimeUnit
 
 class MainWorkManagerActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
         setContentView(R.layout.activity_main_work_manager)
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -27,10 +27,26 @@ class MainWorkManagerActivity : AppCompatActivity() {
             }
         }
 
-        executeOneTimeRequest() //OneTimeRequest
+//        executeOneTimeWorkRequest() //OneTimeRequest
+        executePeriodicWorkTimeRequest() //OneTimeRequest
     }
 
-    private fun executeOneTimeRequest() {
+    private fun executePeriodicWorkTimeRequest() {
+        // 1️⃣ Create Periodic Work Request (every 15 minutes)
+        val periodicWorkRequest =
+            PeriodicWorkRequestBuilder<PeriodicWorker>(15, TimeUnit.MINUTES)
+                .build()
+
+
+        // 2️⃣ Enqueue work (unique to avoid duplicates)
+        WorkManager.getInstance(this).enqueueUniquePeriodicWork(
+            "MyPeriodicWork",
+            androidx.work.ExistingPeriodicWorkPolicy.KEEP,
+            periodicWorkRequest
+        )
+    }
+
+    private fun executeOneTimeWorkRequest() {
 
         // 1️⃣ Create Input Data
         val inputData = Data.Builder()
