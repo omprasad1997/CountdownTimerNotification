@@ -12,6 +12,8 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.Observer
 import com.example.timeronnotification.databinding.ActivityTimerNotificationBinding
 
+// try same using local broadcast manager
+//include input
 class TimerNotificationActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityTimerNotificationBinding

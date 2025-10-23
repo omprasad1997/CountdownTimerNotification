@@ -39,6 +39,7 @@ class TimerService : Service() {
         createNotificationChannel()
     }
 
+    //observe start id
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         // Start the foreground notification (required for Android 14/15)
         if (Build.VERSION.SDK_INT >= 34) {
